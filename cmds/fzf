@@ -1,0 +1,4 @@
+#!/bin/sh
+
+eval "$(fzf --bash)"
+export FZF_DEFAULT_OPTS="--layout=reverse --border=rounded --margin=1,1,0,1 --color=bg:-1 --height=50%"

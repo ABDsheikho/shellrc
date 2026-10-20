@@ -1,0 +1,34 @@
+#!/bin/sh
+
+# ==============================================================================
+# SHELL BEHAVIOR & INTERACTIVE CHECK
+# ==============================================================================
+
+
+# Check window size after each command; update LINES and COLUMNS if needed
+shopt -s checkwinsize
+
+# Correct minor spelling errors in directory names during 'cd'
+shopt -s cdspell
+
+# Enable extended globbing (e.g., ls **/*.js)
+shopt -s globstar
+
+# ==============================================================================
+# ENHANCED TERMINAL HISTORY
+# ==============================================================================
+# Ignore duplicates and commands starting with a space
+export HISTCONTROL=ignoreboth:erasedups
+export HISTIGNORE='cd *'
+export HISTTIMEFORMAT='%Y-%m-%dT%H:%M:%S  '
+
+# Massive history size (effectively infinite)
+export HISTSIZE=500000
+export HISTFILESIZE=100000
+
+# Append to history file immediately; do not overwrite it on exit
+shopt -s histappend
+export PROMPT_COMMAND="history -a; history -c; history -r; $PROMPT_COMMAND"
+# export ELECTRON_OZONE_PLATFORM_HINT="x11"
+# export ELECTRON_ENABLE_WAYLAND=1
+# export XDG_SESSION_TYPE=x11

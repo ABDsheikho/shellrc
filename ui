@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# ==============================================================================
+# 4. COLORIZED CUSTOM PROMPT
+# ==============================================================================
+# Layout: [Timestamp] user@host:current_directory $
+# Colors: Green user/host, Blue directory, Reset text
+COLOR_GREEN='\[\033[01;32m\]'
+COLOR_BLUE='\[\033[01;34m\]'
+COLOR_GRAY='\[\033[00;37m\]'
+COLOR_RESET='\[\033[00m\]'
+
+export PS1="${COLOR_GRAY}\t ${COLOR_GREEN}\u@\h${COLOR_RESET}:${COLOR_BLUE}\w${COLOR_RESET}\$ "
+

@@ -1,0 +1,4 @@
+#!/bin/sh
+
+alias lsd='lsd -Al'
+alias lsdf='lsd -Al --depth=2 --tree'

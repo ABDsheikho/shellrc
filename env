@@ -1,0 +1,28 @@
+#!/bin/sh
+
+
+export XDG_CONFIG_HOME="$HOME/.config"
+export XDG_CACHE_HOME="$HOME/.cache"
+export XDG_DATA_HOME="$HOME/.local/share"
+export XDG_STATE_HOME="$HOME/.local/state"
+
+export HISTFILE="$XDG_STATE_HOME"/bash/history
+export GOPATH="$XDG_DATA_HOME"/go
+export PATH="$PATH:$(go env GOBIN)"
+export PARALLEL_HOME="$XDG_CONFIG_HOME"/parallel
+export INPUTRC="$XDG_CONFIG_HOME"/readline/inputrc
+export DOTNET_CLI_HOME="$XDG_DATA_HOME"/dotnet
+
+# ==============================================================================
+# PATH & ENVIRONMENTAL VARIABLES
+# ==============================================================================
+export EDITOR='nvim' # Default text editor
+export VISUAL='nvim'
+export PAGER='less' # Preferred terminal pager
+# export LANG='en_US.UTF-8'          # Force UTF-8 encoding
+# export LC_ALL='en_US.UTF-8'
+
+# Append custom binaries to system PATH securely
+[[ -d "$HOME/.local/bin" ]] && export PATH="$HOME/.local/bin:$PATH"
+[[ -d "$HOME/bin" ]] && export PATH="$HOME/bin:$PATH"
+

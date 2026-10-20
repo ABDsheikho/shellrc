@@ -1,0 +1,3 @@
+#!/bin/sh
+
+export BEMOJI_PICKER_CMD="fuzzel --dmenu"

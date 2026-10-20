@@ -1,0 +1,102 @@
+#!/bin/sh
+
+# ==============================================================================
+# SMART ALIASES (Navigation, Safety, Shortcuts)
+# ==============================================================================
+
+alias gitshallowclone='git clone --depth=1'
+alias dotfiles="git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME"
+
+alias cyc='cat /sys/class/power_supply/BAT0/cycle_count'
+alias cap='cat /sys/class/power_supply/BAT0/capacity'
+
+# Enable colored output for common terminal commands
+if [ -x /usr/bin/dircolors ]; then
+    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+    alias ls='ls --color=auto'
+    alias grep='grep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias egrep='egrep --color=auto'
+    alias diff='diff --color=auto'
+fi
+
+# Navigation shortcuts
+# alias ..='cd ..'
+# alias ...='cd ../..'
+# alias ....='cd ../../..'
+alias cdh='cd ~'
+
+# Better directory listings
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
+
+# Safety guardrails (prompts before destructive operations)
+alias rm='rm -i'
+alias cp='cp -i'
+alias mv='mv -i'
+
+# System and utility shortcuts
+# alias mkdir='mkdir -p'
+# alias h='history'
+# alias j='jobs -l'
+alias path='echo -e ${PATH//:/\\n}'            # Print PATH variables line-by-line
+alias myip='curl -s https://ifconfig.me; echo' # Quickly find public IP
+
+# Reload bashrc instantly
+alias srcbashrc='source ~/.bashrc'
+
+alias bfile='du -ah . | sort -hr | head -n 25'
+
+source ~/.config/user-dirs.dirs
+
+
+
+extract() {
+    if [ -f "$1" ]; then
+        case "$1" in
+        *.tar.bz2) tar xjf "$1" ;;
+        *.tar.gz) tar xzf "$1" ;;
+        *.bz2) bunzip2 "$1" ;;
+        *.rar) unrar x "$1" ;;
+        *.gz) gunzip "$1" ;;
+        *.tar) tar xf "$1" ;;
+        *.tbz2) tar xjf "$1" ;;
+        *.tgz) tar xzf "$1" ;;
+        *.zip) unzip "$1" ;;
+        *.Z) uncompress "$1" ;;
+        *.7z) 7z x "$1" ;;
+        *) echo "'$1' cannot be extracted via extract()" ;;
+        esac
+    else
+        echo "'$1' is not a valid file"
+    fi
+}
+
+# Create a directory and immediately move into it
+mkcd() {
+    mkdir -p "$1" && cd "$1"
+}
+
+fpac() {
+    pacman -Sl |
+        awk '{print $2}' |
+        fzf --preview='pacman -Si {}' \
+            --preview-window='right:70%' \
+            --height=75% |
+        xargs -rI {} pacman -Si {}
+}
+
+fman() {
+    # find /usr/share/man/man* -type f,l -printf "%f\n"
+
+    find /usr/share/man/man* -type f,l -exec bash -c 'for f; do name="${f##*/}"; printf "%s\n" "${name%.*}"; done' _ {} + |
+
+        # find /usr/share/man/man* -type f,l |
+        #     awk -F/ '{print $NF}' |
+        #     sed 's/\.[^.]*$//' |
+        fzf --preview='man {}' \
+            --preview-window='right:70%' \
+            --height=85% |
+        xargs -rI {} man {}
+}
