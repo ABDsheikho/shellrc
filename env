@@ -1,14 +1,16 @@
 #!/bin/sh
 
 
-export XDG_CONFIG_HOME="$HOME/.config"
-export XDG_CACHE_HOME="$HOME/.cache"
-export XDG_DATA_HOME="$HOME/.local/share"
-export XDG_STATE_HOME="$HOME/.local/state"
+# Respect paths already set by the session; fall back to XDG defaults.
+export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
+export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+
+# Ensure the history directory exists on a fresh setup
+[[ -d $XDG_STATE_HOME/bash ]] || mkdir -p -- "$XDG_STATE_HOME/bash"
 
 export HISTFILE="$XDG_STATE_HOME"/bash/history
-export GOPATH="$XDG_DATA_HOME"/go
-export PATH="$PATH:$(go env GOBIN)"
 export PARALLEL_HOME="$XDG_CONFIG_HOME"/parallel
 export INPUTRC="$XDG_CONFIG_HOME"/readline/inputrc
 export DOTNET_CLI_HOME="$XDG_DATA_HOME"/dotnet

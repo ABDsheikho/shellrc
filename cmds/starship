@@ -1,6 +1,0 @@
-#!/bin/sh
-
-# Awesome prompt via starship
-eval $(starship init bash)
-export STARSHIP_CONFIG=~/.config/starship.toml
-export PS2="${COLOR_GREEN}${COLOR_RESET} "

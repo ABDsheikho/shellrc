@@ -10,15 +10,17 @@ alias dotfiles="git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME"
 alias cyc='cat /sys/class/power_supply/BAT0/cycle_count'
 alias cap='cat /sys/class/power_supply/BAT0/capacity'
 
-# Enable colored output for common terminal commands
-if [ -x /usr/bin/dircolors ]; then
-    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
-    alias ls='ls --color=auto'
-    alias grep='grep --color=auto'
-    alias fgrep='fgrep --color=auto'
-    alias egrep='egrep --color=auto'
-    alias diff='diff --color=auto'
+# Use a custom dircolors database only when one exists
+if command -v dircolors >/dev/null 2>&1 && [[ -r $HOME/.dircolors ]]; then
+    eval "$(dircolors -b "$HOME/.dircolors")"
 fi
+
+# Enable colored output for common terminal commands
+alias ls='ls --color=auto'
+alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
+alias diff='diff --color=auto'
 
 # Navigation shortcuts
 # alias ..='cd ..'
@@ -43,12 +45,14 @@ alias mv='mv -i'
 alias path='echo -e ${PATH//:/\\n}'            # Print PATH variables line-by-line
 alias myip='curl -s https://ifconfig.me; echo' # Quickly find public IP
 
-# Reload bashrc instantly
-alias srcbashrc='source ~/.bashrc'
+# Reload the shell with a fresh .bashrc
+alias srcbashrc='exec bash'
 
 alias bfile='du -ah . | sort -hr | head -n 25'
 
-source ~/.config/user-dirs.dirs
+if [[ -r $HOME/.config/user-dirs.dirs ]]; then
+    source "$HOME/.config/user-dirs.dirs"
+fi
 
 
 

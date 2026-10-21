@@ -14,9 +14,12 @@ osc7_cwd() {
     done
     printf '\e]7;file://%s%s\e\\' "${HOSTNAME}" "${encoded}"
 }
-PROMPT_COMMAND=${PROMPT_COMMAND:+${PROMPT_COMMAND%;}; }osc7_cwd
+if [[ -n ${PROMPT_COMMAND[*]:-} ]]; then
+    PROMPT_COMMAND=("${PROMPT_COMMAND[@]}")
+fi
+[[ " ${PROMPT_COMMAND[*]} " == *" osc7_cwd "* ]] || PROMPT_COMMAND+=("osc7_cwd")
 
 prompt_marker() {
     printf '\e]133;A\e\\'
 }
-PROMPT_COMMAND=${PROMPT_COMMAND:+$PROMPT_COMMAND; }prompt_marker
+[[ " ${PROMPT_COMMAND[*]} " == *" prompt_marker "* ]] || PROMPT_COMMAND+=("prompt_marker")

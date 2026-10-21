@@ -10,5 +10,19 @@ COLOR_BLUE='\[\033[01;34m\]'
 COLOR_GRAY='\[\033[00;37m\]'
 COLOR_RESET='\[\033[00m\]'
 
-export PS1="${COLOR_GRAY}\t ${COLOR_GREEN}\u@\h${COLOR_RESET}:${COLOR_BLUE}\w${COLOR_RESET}\$ "
+# ==============================================================================
+# STARSHIP PROMPT
+# ==============================================================================
+# starship owns PS1 when installed. Export the static prompt only as a fallback,
+# so there is no competing PS1 definition to explain or maintain.
+if command -v starship >/dev/null 2>&1; then
+    export STARSHIP_CONFIG="$XDG_CONFIG_HOME"/starship.toml
+    if ! __bash_cache_init starship.bash "$(command -v starship)" \
+        starship init bash --print-full-init; then
+        eval "$(starship init bash)"
+    fi
+    export PS2="${COLOR_GREEN}${COLOR_RESET} "
+else
+    export PS1="${COLOR_GRAY}\t ${COLOR_GREEN}\u@\h${COLOR_RESET}:${COLOR_BLUE}\w${COLOR_RESET}\$ "
+fi
 
