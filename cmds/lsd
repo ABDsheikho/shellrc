@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 alias lsd='lsd -Al'
 alias lsdf='lsd -Al --depth=2 --tree'

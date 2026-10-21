@@ -1,11 +1,10 @@
-#!/bin/sh
+#!/bin/bash
 
 if ! __bash_cache_init fzf.bash "$(command -v fzf)" fzf --bash; then
     eval "$(fzf --bash)"
 fi
 __fzf_defaults='--layout=reverse --border=rounded --margin=1,1,0,1 --color=bg:-1 --height=50%'
-case " $FZF_DEFAULT_OPTS " in
-*" $__fzf_defaults "*) ;;
-*) export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS:+$FZF_DEFAULT_OPTS }$__fzf_defaults" ;;
-esac
+if [[ " $FZF_DEFAULT_OPTS " != *" $__fzf_defaults "* ]]; then
+    export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS:+$FZF_DEFAULT_OPTS }$__fzf_defaults"
+fi
 unset __fzf_defaults

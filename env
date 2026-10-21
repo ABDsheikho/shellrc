@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 
 # Respect paths already set by the session; fall back to XDG defaults.

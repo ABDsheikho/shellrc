@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 if ! __bash_cache_init zoxide.bash "$(command -v zoxide)" zoxide init bash; then
     eval "$(zoxide init bash)"

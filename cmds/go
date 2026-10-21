@@ -1,11 +1,8 @@
-#!/bin/sh
+#!/bin/bash
 
 export GOPATH="$XDG_DATA_HOME"/go
 
 # Add Go's bin directory to PATH without spawning `go env` on every shell.
-if [ -d "$GOPATH/bin" ]; then
-    case ":$PATH:" in
-    *":$GOPATH/bin:"*) ;;
-    *) export PATH="$PATH:$GOPATH/bin" ;;
-    esac
+if [[ -d $GOPATH/bin ]]; then
+    [[ ":$PATH:" == *":$GOPATH/bin:"* ]] || export PATH="$PATH:$GOPATH/bin"
 fi
