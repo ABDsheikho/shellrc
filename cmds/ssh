@@ -11,6 +11,11 @@ if (($? > 1)); then
     ssh-agent -a "$SSH_AUTH_SOCK" >/dev/null
 fi
 
+# # Old way
+# export SSH_AUTH_SOCK="$HOME/.ssh/agent/fixed-ssh.sock"
+# ps -e | grep ssh-agent >/dev/null ||
+#     ssh-agent -a $SSH_AUTH_SOCK >/dev/null
+
 # # # Define the fixed socket path
 # # export SSH_AUTH_SOCK="$HOME/.ssh/agent/fixed-ssh.sock"
 # #
