@@ -1,6 +1,10 @@
 #!/bin/bash
 
 osc7_cwd() {
+    # Encode path bytes, not characters. OSC 7 carries a URI, so non-ASCII
+    # bytes must be percent-encoded; a UTF-8 locale would otherwise make
+    # ${PWD:$pos:1} return whole characters and printf emit raw UTF-8.
+    local LC_ALL=C
     local strlen=${#PWD}
     local encoded=""
     local pos c o
