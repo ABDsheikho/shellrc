@@ -3,4 +3,12 @@
 if ! __bash_cache_init zoxide.bash "$(command -v zoxide)" zoxide init bash; then
     eval "$(zoxide init bash)"
 fi
-alias cd='z'
+# Use zoxide for cd. With arguments, behave like z; without them, open zi.
+# better than just aliasing `cd` to `z`
+cd() {
+    if (( $# )); then
+        z "$@"
+    else
+        zi
+    fi
+}
