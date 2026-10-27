@@ -23,5 +23,8 @@ if command -v starship >/dev/null 2>&1; then
     fi
     export PS2="${COLOR_GREEN}${COLOR_RESET} "
 else
-    export PS1="${COLOR_GRAY}\t ${COLOR_GREEN}\u@\h${COLOR_RESET}:${COLOR_BLUE}\w${COLOR_RESET}\$ "
+    # \\\$ keeps the backslash-dollar prompt escape after double-quote processing,
+    # so the fallback prompt shows # for root and $ for normal users.
+    # try running `su` to see the $ changes to #
+    export PS1="${COLOR_GRAY}\t ${COLOR_GREEN}\u@\h${COLOR_RESET}:${COLOR_BLUE}\w${COLOR_RESET}\\\$ "
 fi
