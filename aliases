@@ -51,12 +51,14 @@ alias myip='curl -s https://ifconfig.me; printf "\n"' # Quickly find public IP
 # Reload the shell with a fresh .bashrc
 alias srcbashrc='exec bash'
 
+# Show top 25 file/directory under current directory, sorted by largest
 alias bfile='du -ah . | sort -hr | head -n 25'
 
 if [[ -r $HOME/.config/user-dirs.dirs ]]; then
     source "$HOME/.config/user-dirs.dirs"
 fi
 
+# Smart Archive Extractor (handles almost all zip/tar extensions)
 extract() {
     if [[ -f $1 ]]; then
         case "$1" in

@@ -28,6 +28,8 @@ export HISTFILESIZE=100000
 # Append to history file immediately; do not overwrite it on exit
 shopt -s histappend
 
+# A workaround the old way of
+# export PROMPT_COMMAND="history -a; history -c; history -r; $PROMPT_COMMAND"
 __bash_history_sync() {
     history -a # flush this shell's new entries
     history -n # read only entries added by other shells
