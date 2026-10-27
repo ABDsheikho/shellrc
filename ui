@@ -25,4 +25,3 @@ if command -v starship >/dev/null 2>&1; then
 else
     export PS1="${COLOR_GRAY}\t ${COLOR_GREEN}\u@\h${COLOR_RESET}:${COLOR_BLUE}\w${COLOR_RESET}\$ "
 fi
-

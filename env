@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 # Respect paths already set by the session; fall back to XDG defaults.
 export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"

@@ -6,7 +6,7 @@ fi
 # Use zoxide for cd. With arguments, behave like z; without them, open zi.
 # better than just aliasing `cd` to `z`
 cd() {
-    if (( $# )); then
+    if (($#)); then
         z "$@"
     else
         zi

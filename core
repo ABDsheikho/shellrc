@@ -4,7 +4,6 @@
 # SHELL BEHAVIOR & INTERACTIVE CHECK
 # ==============================================================================
 
-
 # Check window size after each command; update LINES and COLUMNS if needed
 shopt -s checkwinsize
 

@@ -5,7 +5,7 @@ export SSH_AUTH_SOCK="$HOME/.ssh/agent/fixed-ssh.sock"
 # Reuse a live agent on the fixed socket; otherwise clear a stale socket and start one.
 ssh-add -l >/dev/null 2>&1
 # 0 = identities loaded, 1 = agent alive but empty; anything else is dead.
-if (( $? > 1 )); then
+if (($? > 1)); then
     [[ -e $SSH_AUTH_SOCK ]] && rm -f -- "$SSH_AUTH_SOCK"
     mkdir -p -- "${SSH_AUTH_SOCK%/*}"
     ssh-agent -a "$SSH_AUTH_SOCK" >/dev/null
