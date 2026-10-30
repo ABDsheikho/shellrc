@@ -1,3 +1,4 @@
 #!/bin/bash
 
 export GOPATH="${GOPATH:-$XDG_DATA_HOME/go}"
+__path_add append "$GOPATH/bin"

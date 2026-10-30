@@ -1,0 +1,3 @@
+#!/bin/bash
+
+export DOTNET_CLI_HOME="${DOTNET_CLI_HOME:-$XDG_DATA_HOME/dotnet}"

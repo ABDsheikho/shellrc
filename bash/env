@@ -10,8 +10,72 @@ export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
 [[ -d $XDG_STATE_HOME/bash ]] || mkdir -p -- "$XDG_STATE_HOME/bash"
 
 export HISTFILE="$XDG_STATE_HOME"/bash/history
-export PARALLEL_HOME="$XDG_CONFIG_HOME"/parallel
-export DOTNET_CLI_HOME="$XDG_DATA_HOME"/dotnet
+
+# ==============================================================================
+# Utilities
+# ==============================================================================
+# Idempotent PATH maintenance, shared by every shell that reads bashrc.
+#
+# __path_add <append|prepend> <directory> [tool]
+#   - no-op if <directory> is already in PATH
+#   - no-op if <tool> is given and is not found by `command -v`
+#   - no-op if <directory> is not a directory
+#   - normalizes trailing slashes (except /), rejects empty entries and colons
+#   - otherwise adds the directory at the requested end and exports PATH
+# Invalid usage returns 2; skipped additions return 0.
+__path_add() {
+    (($# == 2 || $# == 3)) || {
+        printf '__path_add: expected <append|prepend> <directory> [tool]\n' >&2
+        return 2
+    }
+
+    local mode=$1 dir=$2 tool=${3:-}
+    [[ $mode == append || $mode == prepend ]] || {
+        printf "__path_add: mode must be 'append' or 'prepend', got '%s'\n" "$mode" >&2
+        return 2
+    }
+    [[ -n $dir ]] || {
+        printf '__path_add: directory must not be empty\n' >&2
+        return 2
+    }
+
+    while [[ $dir == */ && $dir != / ]]; do
+        dir=${dir%/}
+    done
+
+    [[ $dir == *:* ]] && {
+        printf '__path_add: colon is not allowed in a PATH entry\n' >&2
+        return 2
+    }
+
+    case ":$PATH:" in
+    *":$dir:"*) return 0 ;;
+    esac
+
+    # A tool installed elsewhere (for example, a system cargo) still justifies
+    # adding its companion directory.
+    if [[ -n $tool ]]; then
+        command -v -- "$tool" >/dev/null 2>&1 || return 0
+    fi
+
+    [[ -d $dir ]] || return 0
+
+    if [[ $mode == prepend ]]; then
+        if [[ -z $PATH ]]; then
+            PATH=$dir
+        else
+            PATH=$dir:$PATH
+        fi
+    elif [[ -z $PATH ]]; then
+        PATH=$dir
+    elif [[ $PATH == *: ]]; then
+        PATH+=$dir
+    else
+        PATH+=":$dir"
+    fi
+
+    export PATH
+}
 
 # ==============================================================================
 # ENVIRONMENTAL VARIABLES
@@ -22,5 +86,22 @@ export PAGER='less' # Preferred terminal pager
 # export LANG='en_US.UTF-8'          # Force UTF-8 encoding
 # export LC_ALL='en_US.UTF-8'
 
-export W3M_DIR="$XDG_DATA_HOME"/w3m
-export RUSTUP_HOME="$XDG_DATA_HOME"/rustup
+# ==============================================================================
+# PATH
+# ==============================================================================
+# User binaries first, so tools installed there are visible to the module checks.
+__path_add prepend "$HOME/.local/bin"
+__path_add prepend "$HOME/bin"
+
+# Tool modules: the filename is the command gate, and each module owns its
+# environment variables and PATH entries. BASHRC_DIR is set by bashrc before
+# this file is sourced.
+for __env_file in "$BASHRC_DIR"/bash/env.d/*; do
+    [[ -f $__env_file ]] || continue
+    command -v "${__env_file##*/}" >/dev/null 2>&1 || continue
+    source "$__env_file"
+done
+unset __env_file
+
+# Toolbox has no command matching its directory name, so it is not a module.
+__path_add append "$XDG_DATA_HOME/JetBrains/Toolbox/scripts"

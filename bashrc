@@ -19,7 +19,6 @@ BASHRC_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 # Environment and PATH are needed by every shell that reads this file,
 # including non-interactive login shells and sshd-invoked shells.
 source "$BASHRC_DIR/bash/env"
-source "$BASHRC_DIR/bash/path"
 
 # Everything below is interactive-only.
 case $- in
@@ -34,8 +33,9 @@ source "$BASHRC_DIR/bash/core"
 source "$BASHRC_DIR/bash/ui"
 source "$BASHRC_DIR/bash/aliases"
 
-for file in "$BASHRC_DIR"/bash/cmds/*; do
-    [[ -f $file ]] || continue
-    command -v "${file##*/}" >/dev/null 2>&1 || continue
-    source "$file"
+for __file in "$BASHRC_DIR"/bash/cmds/*; do
+    [[ -f $__file ]] || continue
+    command -v "${__file##*/}" >/dev/null 2>&1 || continue
+    source "$__file"
 done
+unset __file
