@@ -1,0 +1,73 @@
+#!/bin/bash
+
+# Idempotent PATH maintenance, shared by every shell that reads bashrc.
+#
+# __path_add <append|prepend> <directory> [tool]
+#   - no-op if <directory> is already in PATH
+#   - no-op if <tool> is given and is not found by `command -v`
+#   - no-op if <directory> is not a directory
+#   - normalizes trailing slashes (except /), rejects empty entries and colons
+#   - otherwise adds the directory at the requested end and exports PATH
+# Invalid usage returns 2; skipped additions return 0.
+__path_add() {
+    (($# == 2 || $# == 3)) || {
+        printf '__path_add: expected <append|prepend> <directory> [tool]\n' >&2
+        return 2
+    }
+
+    local mode=$1 dir=$2 tool=${3:-}
+    [[ $mode == append || $mode == prepend ]] || {
+        printf "__path_add: mode must be 'append' or 'prepend', got '%s'\n" "$mode" >&2
+        return 2
+    }
+    [[ -n $dir ]] || {
+        printf '__path_add: directory must not be empty\n' >&2
+        return 2
+    }
+
+    while [[ $dir == */ && $dir != / ]]; do
+        dir=${dir%/}
+    done
+
+    [[ $dir == *:* ]] && {
+        printf '__path_add: colon is not allowed in a PATH entry\n' >&2
+        return 2
+    }
+
+    case ":$PATH:" in
+    *":$dir:"*) return 0 ;;
+    esac
+
+    # A tool installed elsewhere (for example, a system cargo) still justifies
+    # adding its companion directory.
+    if [[ -n $tool ]]; then
+        command -v -- "$tool" >/dev/null 2>&1 || return 0
+    fi
+
+    [[ -d $dir ]] || return 0
+
+    if [[ $mode == prepend ]]; then
+        if [[ -z $PATH ]]; then
+            PATH=$dir
+        else
+            PATH=$dir:$PATH
+        fi
+    elif [[ -z $PATH ]]; then
+        PATH=$dir
+    elif [[ $PATH == *: ]]; then
+        PATH+=$dir
+    else
+        PATH+=":$dir"
+    fi
+
+    export PATH
+}
+
+# User binaries: prepend so they win over system copies.
+__path_add prepend "$HOME/.local/bin"
+__path_add prepend "$HOME/bin"
+__path_add prepend "$HOME/.cargo/bin" cargo
+
+# Tool-managed directories: append and never shadow system tools.
+__path_add append "${GOPATH:-${XDG_DATA_HOME:-$HOME/.local/share}/go}/bin" go
+__path_add append "${XDG_DATA_HOME:-$HOME/.local/share}/JetBrains/Toolbox/scripts"
