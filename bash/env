@@ -11,7 +11,6 @@ export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
 
 export HISTFILE="$XDG_STATE_HOME"/bash/history
 export PARALLEL_HOME="$XDG_CONFIG_HOME"/parallel
-export INPUTRC="$XDG_CONFIG_HOME"/readline/inputrc
 export DOTNET_CLI_HOME="$XDG_DATA_HOME"/dotnet
 
 # ==============================================================================

@@ -1,0 +1,77 @@
+# ==============================================================================
+# VIM MODE CONFIGURATION
+# ==============================================================================
+
+# Enable Vim editing mode instead of Emacs
+set editing-mode vi
+
+# Show current Vim mode on the left side of the prompt
+set show-mode-in-prompt on
+
+# Command mode indicator: block cursor, blue glyph
+set vi-cmd-mode-string \1\e[2 q\e[34m\2\1\e[0m\2
+# Insert mode indicator: bar cursor, green glyph
+set vi-ins-mode-string \1\e[5 q\e[32m\2\1\e[0m\2
+
+# set vi-ins-mode-string \1\e[5 q\e[32m\2(ins)\1\e[0m\2
+# set vi-cmd-mode-string \1\e[2 q\e[33m\2(cmd)\1\e[0m\2
+
+# Respond instantly when pressing Esc to switch modes (default is 500ms)
+set keyseq-timeout 100
+
+# ==============================================================================
+# QUALITY OF LIFE & AUTOCOMPLETE
+# ==============================================================================
+
+# Case-insensitive tab completion
+set completion-ignore-case on
+
+# Treat hyphens and underscores as equivalent when completing (requires completion-ignore-case)
+set completion-map-case on
+
+# List completion matches immediately without double-tabbing
+set show-all-if-ambiguous on
+
+# Remember a large number of commands across sessions (used by prefix search and fzf history)
+set history-size 500000
+
+# ==============================================================================
+# COMPLETION & DISPLAY
+# ==============================================================================
+
+# Show the common prefix while cycling candidates with C-n / C-p (menu-complete)
+set menu-complete-display-prefix on
+
+# Highlight the common prefix in the completion list
+set colored-completion-prefix on
+
+# Color-code file types during completion (directories, executables, symlinks)
+set colored-stats on
+
+# # List up to 500 matches without asking "Display all possibilities?" (default is 100)
+# set completion-query-items 500
+
+# ==============================================================================
+# KEY BINDINGS (VIM-LIKE BEHAVIOR)
+# ==============================================================================
+
+# -- Command Mode (after pressing Esc) --
+set keymap vi-command
+
+    # Up/Down arrows: search history by prefix already typed
+    "\e[A": history-search-backward
+    "\e[B": history-search-forward
+
+    # Vim motions: search history by prefix already typed (lowercase + uppercase for convenience)
+    "k": history-search-backward
+    "j": history-search-forward
+
+    # Open $EDITOR to edit complex commands
+    "v": edit-and-execute-command
+
+# -- Insert Mode --
+set keymap vi-insert
+
+    # Up/Down arrows: search history by prefix already typed
+    "\e[A": history-search-backward
+    "\e[B": history-search-forward
