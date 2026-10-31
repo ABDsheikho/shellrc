@@ -8,3 +8,104 @@ if [[ " $FZF_DEFAULT_OPTS " != *" $__fzf_defaults "* ]]; then
     export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS:+$FZF_DEFAULT_OPTS }$__fzf_defaults"
 fi
 unset __fzf_defaults
+
+# ==============================================================================
+# FZF Related Functions (Won't work unless fzf exist)
+# ==============================================================================
+
+# fuzzy-search over pacman packages
+fpac() {
+    pacman -Sl |
+        awk '{print $2}' |
+        fzf --preview='pacman -Si {}' \
+            --preview-window='right:70%' \
+            --height=75% |
+        xargs -rI {} pacman -Si {}
+}
+
+# fuzzy-search over man-pages
+fman() {
+    # find /usr/share/man/man* -type f,l -printf "%f\n"
+
+    find /usr/share/man/man* -type f,l -exec bash -c 'for f; do name="${f##*/}"; printf "%s\n" "${name%.*}"; done' _ {} + |
+
+        # find /usr/share/man/man* -type f,l |
+        #     awk -F/ '{print $NF}' |
+        #     sed 's/\.[^.]*$//' |
+        fzf --preview='man {}' \
+            --preview-window='right:70%' \
+            --height=85% |
+        xargs -rI {} man {}
+}
+
+# Delete selected history entries from both this shell and $HISTFILE
+dhist() {
+    local selected line n count
+    local -a nums
+
+    [[ -n ${HISTFILE:-} ]] || {
+        printf 'dhist: HISTFILE is not set\n' >&2
+        return 1
+    }
+
+    command -v fzf >/dev/null 2>&1 || {
+        printf 'dhist: fzf not found\n' >&2
+        return 1
+    }
+
+    # Make this shell's history as current as possible before showing it.
+    history -a
+    history -n
+
+    selected=$(
+        HISTTIMEFORMAT= history |
+            fzf --multi --tac --no-sort \
+                --prompt='entry> ' \
+                --header='Tab: select | Enter: delete | Esc: cancel'
+    ) || return
+
+    [[ -n $selected ]] || return
+
+    # fzf lines look like: "  123  command"
+    while IFS= read -r line; do
+        [[ $line =~ ^[[:space:]]*([0-9]+) ]] || continue
+        nums+=("${BASH_REMATCH[1]}")
+    done <<<"$selected"
+
+    count=${#nums[@]}
+    ((count)) || return
+
+    # `IFS= read -r n` reads one line into `n`. IFS= prevents field
+    # splitting/trimming and -r disables backslash escaping, so each line
+    # is taken literally. Here each line is one numeric history offset.
+    # They are sorted in reverse numeric order so the highest offset is
+    # removed first: `history -d` renumbers the entries after the deleted
+    # one, so deleting from the end keeps every remaining offset valid.
+    # The loop runs in the current shell, not a subshell, so each
+    # `history -d` affects the history that `history -w` writes.
+    while IFS= read -r n; do
+        history -d "$n" || {
+            # Stop on the first failure and leave $HISTFILE untouched rather
+            # than rewriting it from a partially updated history.
+            printf 'dhist: failed to delete entry %s\n' "$n" >&2
+            return 1
+        }
+    done < <(printf '%s\n' "${nums[@]}" | sort -rn)
+
+    # Keep entries other shells appended while the picker was open.
+    history -n
+
+    # Rewrite $HISTFILE from the updated in-memory history. This makes the
+    # deletions persistent in the file, not just in the picker. Other shells
+    # can still race, so this is not an atomic multi-shell edit.
+    history -w || {
+        printf 'dhist: failed to write %s\n' "$HISTFILE" >&2
+        return 1
+    }
+
+    if ((count == 1)); then
+        printf 'Deleted 1 history entry from %s\n' "$HISTFILE"
+    else
+        printf 'Deleted %d history entries from %s\n' "$count" "$HISTFILE"
+    fi
+}
