@@ -11,37 +11,31 @@ if (($? > 1)); then
     ssh-agent -a "$SSH_AUTH_SOCK" >/dev/null
 fi
 
-# # Old way
+# # My old method
 # export SSH_AUTH_SOCK="$HOME/.ssh/agent/fixed-ssh.sock"
 # ps -e | grep ssh-agent >/dev/null ||
 #     ssh-agent -a $SSH_AUTH_SOCK >/dev/null
 
-# # # Define the fixed socket path
-# # export SSH_AUTH_SOCK="$HOME/.ssh/agent/fixed-ssh.sock"
-# #
-# # # Check if the socket is already responsive; if not (broken), spin up the agent
-# # if ! ssh-add -l >/dev/null 2>&1; then
-# #     # Remove a stale socket file if it exists
-# #     [ -S "$SSH_AUTH_SOCK" ] && rm "$SSH_AUTH_SOCK"
-# #
-# #     # Start the agent using the fixed socket path
-# #     ssh-agent -a "$SSH_AUTH_SOCK" >/dev/null
-# # fi
-#
-# SSH_ENV="$HOME/.ssh/agent/agent.env"
+# # How Debian solve it
+# # Set up ssh-agent
+# SSH_ENV="$HOME/.ssh/environment"
 #
 # function start_agent {
-#     # echo "Initialising new SSH agent..."
-#     ssh-agent | sed 's/^echo/#echo/' >"${SSH_ENV}"
+#     echo "Initializing new SSH agent..."
+#     /usr/bin/ssh-agent | sed 's/^echo/#echo/' >"${SSH_ENV}"
+#     echo succeeded
 #     chmod 600 "${SSH_ENV}"
-#     source "${SSH_ENV}" >/dev/null
+#     . "${SSH_ENV}" >/dev/null
+#     /usr/bin/ssh-add
 # }
 #
-# # Source the environment if it exists
+# # Source SSH settings, if applicable
 # if [ -f "${SSH_ENV}" ]; then
 #     . "${SSH_ENV}" >/dev/null
-#     # Check if the pid is still running
-#     ps -ef | grep ${SSH_AGENT_PID} | grep ssh-agent >/dev/null || start_agent
+#     #ps ${SSH_AGENT_PID} doesn't work under cywgin
+#     ps -ef | grep ${SSH_AGENT_PID} | grep ssh-agent$ >/dev/null || {
+#         start_agent
+#     }
 # else
 #     start_agent
 # fi
