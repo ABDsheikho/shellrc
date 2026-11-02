@@ -1,0 +1,111 @@
+#!/bin/bash
+
+# Idempotent PATH maintenance, shared by every shell that reads bashrc.
+#
+# __path_add <append|prepend> <directory> [tool]
+#   - no-op if <directory> is already in PATH
+#   - no-op if <tool> is given and is not found by `command -v`
+#   - no-op if <directory> is not a directory
+#   - normalizes trailing slashes (except /), rejects empty entries and colons
+#   - otherwise adds the directory at the requested end and exports PATH
+# Invalid usage returns 2; skipped additions return 0.
+__path_add() {
+    (($# == 2 || $# == 3)) || {
+        printf '__path_add: expected <append|prepend> <directory> [tool]\n' >&2
+        return 2
+    }
+
+    local mode=$1 dir=$2 tool=${3:-}
+    [[ $mode == append || $mode == prepend ]] || {
+        printf "__path_add: mode must be 'append' or 'prepend', got '%s'\n" "$mode" >&2
+        return 2
+    }
+    [[ -n $dir ]] || {
+        printf '__path_add: directory must not be empty\n' >&2
+        return 2
+    }
+
+    while [[ $dir == */ && $dir != / ]]; do
+        dir=${dir%/}
+    done
+
+    [[ $dir == *:* ]] && {
+        printf '__path_add: colon is not allowed in a PATH entry\n' >&2
+        return 2
+    }
+
+    case ":$PATH:" in
+    *":$dir:"*) return 0 ;;
+    esac
+
+    # A tool installed elsewhere (for example, a system cargo) still justifies
+    # adding its companion directory.
+    if [[ -n $tool ]]; then
+        command -v -- "$tool" >/dev/null 2>&1 || return 0
+    fi
+
+    [[ -d $dir ]] || return 0
+
+    if [[ $mode == prepend ]]; then
+        if [[ -z $PATH ]]; then
+            PATH=$dir
+        else
+            PATH=$dir:$PATH
+        fi
+    elif [[ -z $PATH ]]; then
+        PATH=$dir
+    elif [[ $PATH == *: ]]; then
+        PATH+=$dir
+    else
+        PATH+=":$dir"
+    fi
+
+    export PATH
+}
+
+# Source tool-related config/script files.
+# Files should be named after their command (example: fzf -> fzf).
+# Otherwise they are skipped.
+__src_tool_modules() {
+    # Usage: __src_tool_modules <path-to-directory>
+    local dir=${1%/} module
+    [[ -n $dir ]] || return 2
+
+    for module in "$dir"/*; do
+        [[ -f $module ]] || continue
+        command -v "${module##*/}" >/dev/null 2>&1 || continue
+        source "$module"
+    done
+}
+
+# Cache generated init scripts so tools are not spawned on every shell.
+__bash_cache_init() {
+    # Usage: __bash_cache_init <cache-name> <binary-path> <command...>
+    #
+    # Run <command...>, store its stdout in
+    # ${XDG_CACHE_HOME:-$HOME/.cache}/bash/<cache-name>, then source it.
+    # Regenerate only when the cache is missing/empty or <binary-path> is
+    # newer than the cache (mtime only). Command, version, and config changes
+    # are not detected; clear the cache directory to force a refresh.
+    # Writes are atomic (temp file + mv). Returns non-zero if generation,
+    # replacement, or sourcing fails; callers should then fall back to eval.
+    local __cache_name=$1 __cache_bin=$2
+    shift 2
+    local __cache_file="${XDG_CACHE_HOME:-$HOME/.cache}/bash/$__cache_name"
+    local __cache_tmp="$__cache_file.$$"
+
+    if [[ ! -s $__cache_file || $__cache_bin -nt $__cache_file ]]; then
+        mkdir -p -- "${__cache_file%/*}" || return 1
+        if "$@" >"$__cache_tmp" 2>/dev/null; then
+            mv -f -- "$__cache_tmp" "$__cache_file" || {
+                rm -f -- "$__cache_tmp"
+                return 1
+            }
+        else
+            rm -f -- "$__cache_tmp"
+            return 1
+        fi
+    fi
+
+    source "$__cache_file"
+}

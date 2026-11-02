@@ -16,6 +16,8 @@ BASHRC_LOADED=1
 # [[ $BASHRC_DIR == "${BASH_SOURCE[0]}" ]] && BASHRC_DIR=.
 BASHRC_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 
+source "$BASHRC_DIR/bash/utility"
+
 # Environment and PATH are needed by every shell that reads this file,
 # including non-interactive login shells and sshd-invoked shells.
 source "$BASHRC_DIR/bash/env"
@@ -33,9 +35,4 @@ source "$BASHRC_DIR/bash/core"
 source "$BASHRC_DIR/bash/ui"
 source "$BASHRC_DIR/bash/aliases"
 
-for __file in "$BASHRC_DIR"/bash/cmds/*; do
-    [[ -f $__file ]] || continue
-    command -v "${__file##*/}" >/dev/null 2>&1 || continue
-    source "$__file"
-done
-unset __file
+__src_tool_modules "$BASHRC_DIR/bash/cmds"

@@ -56,38 +56,3 @@ if [[ " ${PROMPT_COMMAND[*]} ${STARSHIP_PROMPT_COMMAND:-} " != *" __bash_history
         PROMPT_COMMAND[0]="${PROMPT_COMMAND[0]:+${PROMPT_COMMAND[0]}; }__bash_history_sync"
     fi
 fi
-
-# Cache generated init scripts so tools are not spawned on every shell.
-__bash_cache_init() {
-    # Usage: __bash_cache_init <cache-name> <binary-path> <command...>
-    #
-    # Run <command...>, store its stdout in
-    # ${XDG_CACHE_HOME:-$HOME/.cache}/bash/<cache-name>, then source it.
-    # Regenerate only when the cache is missing/empty or <binary-path> is
-    # newer than the cache (mtime only). Command, version, and config changes
-    # are not detected; clear the cache directory to force a refresh.
-    # Writes are atomic (temp file + mv). Returns non-zero if generation,
-    # replacement, or sourcing fails; callers should then fall back to eval.
-    local __cache_name=$1 __cache_bin=$2
-    shift 2
-    local __cache_file="${XDG_CACHE_HOME:-$HOME/.cache}/bash/$__cache_name"
-    local __cache_tmp="$__cache_file.$$"
-
-    if [[ ! -s $__cache_file || $__cache_bin -nt $__cache_file ]]; then
-        mkdir -p -- "${__cache_file%/*}" || return 1
-        if "$@" >"$__cache_tmp" 2>/dev/null; then
-            mv -f -- "$__cache_tmp" "$__cache_file" || {
-                rm -f -- "$__cache_tmp"
-                return 1
-            }
-        else
-            rm -f -- "$__cache_tmp"
-            return 1
-        fi
-    fi
-
-    source "$__cache_file"
-}
-# export ELECTRON_OZONE_PLATFORM_HINT="x11"
-# export ELECTRON_ENABLE_WAYLAND=1
-# export XDG_SESSION_TYPE=x11
