@@ -11,7 +11,7 @@
 # Invalid usage returns 2; skipped additions return 0.
 __path_add() {
     (($# == 2 || $# == 3)) || {
-        printf '__path_add: expected <append|prepend> <directory> [tool]\n' >&2
+        echo '__path_add: expected <append|prepend> <directory> [tool]' >&2
         return 2
     }
 
@@ -21,7 +21,7 @@ __path_add() {
         return 2
     }
     [[ -n $dir ]] || {
-        printf '__path_add: directory must not be empty\n' >&2
+        echo '__path_add: directory must not be empty' >&2
         return 2
     }
 
@@ -30,7 +30,7 @@ __path_add() {
     done
 
     [[ $dir == *:* ]] && {
-        printf '__path_add: colon is not allowed in a PATH entry\n' >&2
+        echo '__path_add: colon is not allowed in a PATH entry' >&2
         return 2
     }
 

@@ -35,7 +35,7 @@ alias rm='rm -i'
 alias cp='cp -i'
 alias mv='mv -i'
 
-alias myip='curl -s https://ifconfig.me; printf "\n"' # Quickly find public IP
+alias myip='curl -fsS https://ifconfig.me && echo' # Quickly find public IP
 
 # Reload the shell with a fresh .bashrc
 alias srcbashrc='exec bash'
