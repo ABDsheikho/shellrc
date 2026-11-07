@@ -55,6 +55,19 @@ set colored-stats on
 # KEY BINDINGS (VIM-LIKE BEHAVIOR)
 # ==============================================================================
 
+# Bind Tab to cycle forward
+TAB: menu-complete
+
+# Bind Shift+Tab to cycle backward
+"\e[Z": menu-complete-backward
+
+# Bind Alt+Semicolon to open editor (nvim)
+#
+# GNU Readline (which reads your .inputrc) does not natively support launching
+# external shell commands.
+# Workaround, a macro that literally types out nvim and presses enter.
+"\e;": "nvim\n"
+
 # -- Command Mode (after pressing Esc) --
 set keymap vi-command
 
