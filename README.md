@@ -121,3 +121,7 @@ editing it.
 - **zsh layer.** Add `zshrc`, `zprofile`, and `zsh/`
   ([ADR 01](docs/adr/01-one-layer-per-shell.md)).
 - Keep the `~/.bashrc` / `~/.bash_profile` stubs in line with [Setup](#setup).
+
+## License
+
+[0BSD](LICENSE): use, copy, and modify freely; no attribution required.
