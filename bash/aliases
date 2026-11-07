@@ -40,9 +40,6 @@ alias myip='curl -fsS https://ifconfig.me && echo' # Quickly find public IP
 # Reload the shell with a fresh .bashrc
 alias srcbashrc='exec bash'
 
-# Show top 25 file/directory under current directory, sorted by largest
-alias bfile='du -ah . | sort -hr | head -n 25'
-
 # ==============================================================================
 # Functions
 # ==============================================================================
@@ -50,6 +47,33 @@ alias bfile='du -ah . | sort -hr | head -n 25'
 # Print PATH entries line-by-line without spawning a subprocess
 path() {
     printf '%s\n' "${PATH//:/$'\n'}"
+}
+
+# Show the 25 largest files/directories under a directory
+bfile() {
+    # Accept at most one directory argument
+    (($# <= 1)) || {
+        echo 'usage: bfile [directory]' >&2
+        return 2
+    }
+
+    # Default to the current directory when no argument is given
+    local dir=${1:-.}
+
+    # Fail when the path does not exist
+    if [[ ! -e $dir ]]; then
+        printf "bfile: '%s' does not exist\n" "$dir" >&2
+        return 1
+    fi
+
+    # Fail when the path exists but is not a directory
+    if [[ ! -d $dir ]]; then
+        printf "bfile: '%s' is not a directory\n" "$dir" >&2
+        return 1
+    fi
+
+    # List sizes in human-readable form, largest first, and keep the top 25
+    du -ah -- "$dir" | sort -hr | head -n 25
 }
 
 # Smart Archive Extractor (handles almost all zip/tar extensions)
