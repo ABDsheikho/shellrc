@@ -1,0 +1,257 @@
+#!/bin/bash
+#
+# checkhealth: verify this config and report on the live environment.
+#
+# Usage: ./checkhealth [--config | --env]
+#
+#   config  Load the config in a throwaway HOME and check that it behaves.
+#           Never touches the real history, cache, or ssh-agent.
+#           Prints PASS/FAIL; any FAIL makes the exit status non-zero.
+#   env     Read-only report on this machine: entry points, optional tools,
+#           INPUTRC, init caches, ssh-agent. Prints OK/WARN/SKIP and never
+#           changes the exit status, since every tool is optional.
+
+REPO=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+FAILS=0
+
+if [[ -t 1 ]]; then
+    C_GREEN=$'\e[32m' C_RED=$'\e[31m' C_YELLOW=$'\e[33m' C_DIM=$'\e[2m' C_RESET=$'\e[0m'
+else
+    C_GREEN='' C_RED='' C_YELLOW='' C_DIM='' C_RESET=''
+fi
+
+section() { printf '\n%s\n' "$1"; }
+pass() { printf '  %sPASS%s  %s\n' "$C_GREEN" "$C_RESET" "$1"; }
+fail() {
+    printf '  %sFAIL%s  %s\n' "$C_RED" "$C_RESET" "$1"
+    [[ -n ${2:-} ]] && printf '%s\n' "$2" | sed 's/^/        /'
+    ((FAILS++))
+}
+ok() { printf '  %sOK%s    %s\n' "$C_GREEN" "$C_RESET" "$1"; }
+warn() { printf '  %sWARN%s  %s\n' "$C_YELLOW" "$C_RESET" "$1"; }
+skip() { printf '  %sSKIP  %s%s\n' "$C_DIM" "$1" "$C_RESET"; }
+
+# ==============================================================================
+# Config
+# ==============================================================================
+
+check_config() {
+    local sandbox bin tool out err expected
+    sandbox=$(mktemp -d) || {
+        fail 'could not create a temporary HOME'
+        return
+    }
+    trap 'rm -rf -- "$sandbox"' RETURN
+
+    # Minimal PATH: only what the entry points need. Optional tools (ssh,
+    # starship, fzf, ...) stay hidden, so no cmds/env.d module runs and no
+    # agent or cache is created.
+    bin=$sandbox/sbin
+    mkdir -p -- "$bin" "$sandbox/home/bin" "$sandbox/home/.local/bin"
+    for tool in dirname mkdir mv rm; do
+        ln -s -- "$(command -v "$tool")" "$bin/$tool"
+    done
+
+    # Home stubs exactly as README Setup describes.
+    printf 'source %q\n' "$REPO/bashrc" >"$sandbox/home/.bashrc"
+    printf 'source %q\n' "$REPO/bash_profile" >"$sandbox/home/.bash_profile"
+
+    # Run bash in the sandbox, from an unrelated directory, with a clean env.
+    # --noprofile --norc skips /etc/profile and /etc/bash.bashrc, which would
+    # put the system PATH (and every optional tool) back; tests that need a
+    # login shell source the ~/.bash_profile stub themselves.
+    sbx() {
+        (cd /tmp && env -i HOME="$sandbox/home" PATH="$bin" TERM=dumb "$@" "$BASH" --noprofile --norc "${SBX_ARGS[@]}")
+    }
+
+    section 'Config (throwaway HOME)'
+
+    # 1. Syntax
+    local files=("$REPO"/bashrc "$REPO"/bash_profile "$REPO"/bash/{utility,env,core,ui,aliases}
+        "$REPO"/bash/env.d/* "$REPO"/bash/cmds/*)
+    # One file per call: `bash -n a b` checks only a and passes b as $1.
+    local f errs=()
+    for f in "${files[@]}"; do
+        err=$("$BASH" -n "$f" 2>&1) || errs+=("$err")
+    done
+    if ((${#errs[@]} == 0)); then
+        pass "syntax (bash -n) of ${#files[@]} files"
+    else
+        fail 'syntax (bash -n)' "$(printf '%s\n' "${errs[@]}")"
+    fi
+
+    # 2. Interactive login shell loads everything, without errors.
+    SBX_ARGS=(-i -c 'source ~/.bash_profile; printf "%s\n" "$BASHRC_DIR"; type -t srcbashrc __path_add __src_tool_modules __bash_cache_init')
+    out=$(sbx 2>"$sandbox/err")
+    # Without a terminal, bash -i always complains about job control.
+    err=$(grep -vE 'no job control|terminal process group' "$sandbox/err")
+    expected=$(printf '%s\n' "$REPO" alias function function function)
+    if [[ $out == "$expected" ]]; then
+        pass 'interactive shell (via ~/.bash_profile) defines BASHRC_DIR and helpers'
+    else
+        fail 'interactive shell (via ~/.bash_profile) defines BASHRC_DIR and helpers' "expected:
+$expected
+got:
+$out"
+    fi
+    if [[ -z $err ]]; then
+        pass 'interactive startup prints nothing to stderr'
+    else
+        fail 'interactive startup prints nothing to stderr' "$err"
+    fi
+
+    # 3. Non-interactive login shell (bash -lc, ssh host cmd) gets PATH, and
+    #    loading the environment again adds nothing.
+    SBX_ARGS=(-c 'source ~/.bash_profile; printf "%s\n" "$PATH"; source "$BASHRC_DIR/bash/env"; printf "%s\n" "$PATH"')
+    out=$(sbx 2>&1)
+    expected="$sandbox/home/bin:$sandbox/home/.local/bin:$bin"
+    if [[ ${out%%$'\n'*} == "$expected" ]]; then
+        pass 'non-interactive shell (bash -lc, ssh cmd) gets the configured PATH'
+    else
+        fail 'non-interactive shell (bash -lc, ssh cmd) gets the configured PATH' "expected: $expected
+got: ${out%%$'\n'*}"
+    fi
+    if [[ ${out%%$'\n'*} == "${out#*$'\n'}" ]]; then
+        pass 'loading env twice adds no PATH entries'
+    else
+        fail 'loading env twice adds no PATH entries' "$out"
+    fi
+
+    # 4. Pre-set XDG paths are respected, and HISTFILE follows them.
+    SBX_ARGS=(-c 'source ~/.bash_profile; printf "%s\n" "$XDG_STATE_HOME" "$HISTFILE"')
+    out=$(sbx XDG_STATE_HOME="$sandbox/state" 2>&1)
+    expected=$(printf '%s\n' "$sandbox/state" "$sandbox/state/bash/history")
+    if [[ $out == "$expected" ]]; then
+        pass 'pre-set XDG_STATE_HOME is kept; HISTFILE follows it'
+    else
+        fail 'pre-set XDG_STATE_HOME is kept; HISTFILE follows it' "$out"
+    fi
+
+    # 5. __path_add contract: bad usage returns 2, a missing dir is skipped.
+    SBX_ARGS=(-c 'source "$1"; p=$PATH
+        __path_add sideways /tmp 2>/dev/null; printf "%s " $?
+        __path_add append /nonexistent/dir; printf "%s " $?
+        [[ $PATH == "$p" ]] && printf same' _ "$REPO/bash/utility")
+    out=$(sbx 2>&1)
+    if [[ $out == '2 0 same' ]]; then
+        pass '__path_add: bad usage returns 2, missing dir is skipped'
+    else
+        fail '__path_add: bad usage returns 2, missing dir is skipped' "got: $out"
+    fi
+}
+
+# ==============================================================================
+# Environment
+# ==============================================================================
+
+# Does <file> source <target> (given as an absolute, ~, or $HOME path)?
+sources() {
+    local file=$1 target=$2 rel=${2#"$HOME"}
+    [[ -r $file ]] || return 1
+    grep -qF -e "$target" -e "~$rel" -e "\$HOME$rel" -e "\${HOME}$rel" -- "$file"
+}
+
+check_env() {
+    local f profile module name tool cache cmd tmp
+
+    section 'Environment (this machine)'
+
+    if ((BASH_VERSINFO[0] > 5 || (BASH_VERSINFO[0] == 5 && BASH_VERSINFO[1] >= 1))); then
+        ok "bash $BASH_VERSION"
+    else
+        warn "bash $BASH_VERSION is older than 5.1 (PROMPT_COMMAND arrays)"
+    fi
+
+    # Entry points. A login shell reads the first of these that exists.
+    if sources "$HOME/.bashrc" "$REPO/bashrc"; then
+        ok '~/.bashrc sources bashrc'
+    else
+        warn "~/.bashrc does not source $REPO/bashrc"
+    fi
+    for f in .bash_profile .bash_login .profile; do
+        [[ -e $HOME/$f ]] && profile=$f && break
+    done
+    if [[ -z ${profile:-} ]]; then
+        warn "no ~/.bash_profile; login shells will not load $REPO/bash_profile"
+    elif sources "$HOME/$profile" "$REPO/bash_profile"; then
+        ok "~/$profile sources bash_profile"
+    else
+        warn "~/$profile does not source $REPO/bash_profile"
+    fi
+
+    if [[ ${INPUTRC:-} == "$REPO/inputrc" ]]; then
+        ok 'INPUTRC points at the repo'
+    elif [[ -z ${INPUTRC:-} ]]; then
+        warn 'INPUTRC is not set (run from an interactive shell using this config)'
+    else
+        warn "INPUTRC is $INPUTRC, not $REPO/inputrc"
+    fi
+
+    # Which modules load here (filename = command gate, see docs/adr).
+    section 'Modules (env.d, cmds)'
+    for module in "$REPO"/bash/env.d/* "$REPO"/bash/cmds/*; do
+        [[ -f $module ]] || continue
+        name=${module#"$REPO"/bash/}
+        if command -v "${module##*/}" >/dev/null 2>&1; then
+            ok "$name"
+        else
+            skip "$name (${module##*/} not found)"
+        fi
+    done
+
+    # The cache only refreshes when the binary's mtime changes (ADR 04).
+    # Compare each cache with fresh output to catch what mtime misses.
+    # Keep these commands in sync with bash/ui and bash/cmds.
+    section 'Init caches'
+    local -A init=(
+        [starship.bash]='starship init bash --print-full-init'
+        [zoxide.bash]='zoxide init bash'
+        [fzf.bash]='fzf --bash'
+    )
+    for name in "${!init[@]}"; do
+        cache=${XDG_CACHE_HOME:-$HOME/.cache}/bash/$name
+        read -ra cmd <<<"${init[$name]}"
+        if ! command -v "${cmd[0]}" >/dev/null 2>&1; then
+            if [[ -e $cache ]]; then
+                warn "$name: ${cmd[0]} is gone but its cache remains"
+            else
+                skip "$name (${cmd[0]} not found)"
+            fi
+        elif [[ ! -s $cache ]]; then
+            skip "$name (generated on next shell start)"
+        elif tmp=$("${cmd[@]}" 2>/dev/null) && [[ $tmp == "$(<"$cache")" ]]; then
+            ok "$name is current"
+        else
+            warn "$name differs from '${init[$name]}'; clear ${cache%/*} and restart"
+        fi
+    done
+
+    section 'ssh-agent'
+    if ! command -v ssh-add >/dev/null 2>&1; then
+        skip 'ssh-add not found'
+    else
+        ssh-add -l >/dev/null 2>&1
+        case $? in
+        0) ok "agent on ${SSH_AUTH_SOCK:-?} has identities" ;;
+        1) ok "agent on ${SSH_AUTH_SOCK:-?} is alive, no identities" ;;
+        *) warn "no agent answers on ${SSH_AUTH_SOCK:-<unset>}" ;;
+        esac
+    fi
+}
+
+# ==============================================================================
+# Main
+# ==============================================================================
+
+case ${1:-} in
+'') check_config; check_env ;;
+--config) check_config ;;
+--env) check_env ;;
+-h | --help) sed -n '3,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+*) printf 'checkhealth: unknown option %s (try --help)\n' "$1" >&2; exit 2 ;;
+esac
+
+if ((FAILS)); then
+    printf '\n%s%d check(s) failed%s\n' "$C_RED" "$FAILS" "$C_RESET"
+    exit 1
+fi
